@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/RIDOS/news-blog/handler"
 	"github.com/RIDOS/news-blog/internal/config"
 	"github.com/RIDOS/news-blog/internal/lib/logger/sl"
-	"github.com/RIDOS/news-blog/internal/storage/sqlite"
 	"log/slog"
+	"net/http"
 	"os"
 )
 
@@ -20,14 +21,22 @@ func main() {
 
 	log.Info("Server start", slog.String("env", cfg.Env))
 
-	storage, err := sqlite.New(cfg.StoragePath)
-	if err != nil {
-		log.Error("failed to init storage", sl.Err(err))
+	//storage, err := sqlite.New(cfg.StoragePath)
+	//if err != nil {
+	//	log.Error("failed to init storage", sl.Err(err))
+	//	os.Exit(1)
+	//}
+	//
+	//log.Info("Storage start", slog.String("env", cfg.Env))
+	//_ = storage
+
+	handler.SetupRoutes()
+
+	log.Info("Listening on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Error("failed to start server", sl.Err(err))
 		os.Exit(1)
 	}
-
-	log.Info("Storage start", slog.String("env", cfg.Env))
-	_ = storage
 }
 
 func setupLogger(env string) *slog.Logger {
