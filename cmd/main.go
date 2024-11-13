@@ -4,6 +4,7 @@ import (
 	"github.com/RIDOS/news-blog/handler"
 	"github.com/RIDOS/news-blog/internal/config"
 	"github.com/RIDOS/news-blog/internal/lib/logger/sl"
+	"github.com/RIDOS/news-blog/internal/repository"
 	"log/slog"
 	"net/http"
 	"os"
@@ -21,6 +22,7 @@ func main() {
 
 	log.Info("Server start", slog.String("env", cfg.Env))
 
+	// TODO: add interface for db.
 	//storage, err := sqlite.New(cfg.StoragePath)
 	//if err != nil {
 	//	log.Error("failed to init storage", sl.Err(err))
@@ -30,7 +32,9 @@ func main() {
 	//log.Info("Storage start", slog.String("env", cfg.Env))
 	//_ = storage
 
-	handler.SetupRoutes()
+	nr := repository.NewNewsRepository()
+
+	handler.SetupRoutes(nr)
 
 	log.Info("Listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

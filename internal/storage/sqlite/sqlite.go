@@ -13,6 +13,7 @@ type Storage struct {
 	db *sql.DB
 }
 
+// New TODO: need migrations and interface for storage
 func New(storagePath string) (*Storage, error) {
 	const op = "storage.sqlite.New"
 

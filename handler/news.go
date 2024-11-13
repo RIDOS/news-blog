@@ -2,72 +2,60 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/RIDOS/news-blog/pkg/models"
+	"github.com/RIDOS/news-blog/internal/repository"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
-func getNewsHandler(w http.ResponseWriter, r *http.Request) {
-	// test case
-	news := []models.New{
-		{
-			Id:        1,
-			Title:     "Test",
-			Body:      "Test body",
-			Image:     "file://",
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		},
-	}
+func getNewsHandler(newsRepository *repository.NewsRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		news, _ := newsRepository.GetAllNews()
+		w.Header().Set("Content-Type", "application/json")
 
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := json.NewEncoder(w).Encode(news); err != nil {
-		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(news); err != nil {
+			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+		}
 	}
 }
 
-func getNewsByIDHandler(w http.ResponseWriter, r *http.Request) {
-	// test case
-	news := []models.New{
-		{
-			Id:        1,
-			Title:     "Test",
-			Body:      "Test body",
-			Image:     "file://",
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		},
-	}
+func getNewsByIDHandler(newsRepository *repository.NewsRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		pathParts := strings.Split(r.URL.Path, "/")
 
-	pathParts := strings.Split(r.URL.Path, "/")
-
-	if len(pathParts) < 3 || pathParts[1] != "news" {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(pathParts[2])
-	if err != nil || id >= len(news) || id < 0 {
-		response := map[string]string{
-			"status":  "error",
-			"message": "Invalid URL",
+		if len(pathParts) < 3 || pathParts[1] != "news" {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 
-		if err := json.NewEncoder(w).Encode(response); err != nil {
+		id, err := strconv.Atoi(pathParts[2])
+		if err != nil || id < 0 {
+			response := map[string]string{
+				"status":  "error",
+				"message": "Invalid URL",
+			}
+
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		paper, err := newsRepository.GetNewsByID(id)
+		if err != nil {
+			if err := json.NewEncoder(w).Encode(map[string]string{
+				"status":  "error",
+				"message": err.Error(),
+			}); err != nil {
+				http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(paper); err != nil {
 			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 		}
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	paper := news[id]
-	if err := json.NewEncoder(w).Encode(paper); err != nil {
-		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 	}
 }
