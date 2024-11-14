@@ -1,46 +1,42 @@
 package repository
 
 import (
-	"errors"
-	"github.com/RIDOS/news-blog/internal/models"
+	"github.com/RIDOS/news-blog/internal/storage"
+	"github.com/RIDOS/news-blog/pkg/models"
 	"time"
 )
 
 type NewsRepository struct {
+	st storage.Storage
 }
 
-func NewNewsRepository() *NewsRepository {
-	return &NewsRepository{}
+func NewNewsRepository(st storage.Storage) *NewsRepository {
+	return &NewsRepository{st: st}
 }
 
-func (r *NewsRepository) GetNewsByID(id int) (*models.News, error) {
-	news := []models.News{
+func (r *NewsRepository) GetNewsByID(id int) (*models.New, error) {
+	news, err := r.st.GetNews(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if news.Id <= 0 {
+		return nil, storage.ErrNewsNotFound
+	}
+
+	return &news, nil
+}
+
+func (r *NewsRepository) GetAllNews() ([]models.New, error) {
+	news := []models.New{
 		{
 			Id:        1,
 			Title:     "Test",
 			Body:      "Test body",
 			Image:     "file://",
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		},
-	}
-
-	if len(news) <= id {
-		return nil, errors.New("id out of range")
-	}
-
-	return &news[id], nil
-}
-
-func (r *NewsRepository) GetAllNews() ([]models.News, error) {
-	news := []models.News{
-		{
-			Id:        1,
-			Title:     "Test",
-			Body:      "Test body",
-			Image:     "file://",
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	}
 	return news, nil
