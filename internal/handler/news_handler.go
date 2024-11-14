@@ -8,10 +8,29 @@ import (
 	"strings"
 )
 
-func getNewsHandler(newsRepository *repository.NewsRepository) http.HandlerFunc {
+type NewsHandler struct {
+	NewsRepository *repository.NewsRepository
+}
+
+func NewNewsHandler(newsRepo *repository.NewsRepository) *NewsHandler {
+	return &NewsHandler{NewsRepository: newsRepo}
+}
+
+func (h *NewsHandler) SetupRoutes() {
+	http.HandleFunc("/news", h.getNewsHandler())
+	http.HandleFunc("/news/", h.getNewsByIDHandler())
+}
+
+func (h *NewsHandler) getNewsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		news, _ := newsRepository.GetAllNews()
+		news, err := h.NewsRepository.GetAllNews()
+
 		w.Header().Set("Content-Type", "application/json")
+
+		if err != nil {
+			http.Error(w, "Failed to retrieve news", http.StatusInternalServerError)
+			return
+		}
 
 		if err := json.NewEncoder(w).Encode(news); err != nil {
 			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
@@ -19,32 +38,26 @@ func getNewsHandler(newsRepository *repository.NewsRepository) http.HandlerFunc 
 	}
 }
 
-func getNewsByIDHandler(newsRepository *repository.NewsRepository) http.HandlerFunc {
+func (h *NewsHandler) getNewsByIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pathParts := strings.Split(r.URL.Path, "/")
-
-		if len(pathParts) < 3 || pathParts[1] != "news" {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
+		idStr := strings.TrimPrefix(r.URL.Path, "/news/")
+		id, err := strconv.Atoi(idStr)
 
 		w.Header().Set("Content-Type", "application/json")
 
-		id, err := strconv.Atoi(pathParts[2])
 		if err != nil || id < 0 {
-			response := map[string]string{
+			if err := json.NewEncoder(w).Encode(map[string]string{
 				"status":  "error",
-				"message": "Invalid URL",
-			}
-
-			if err := json.NewEncoder(w).Encode(response); err != nil {
+				"message": "Invalid news ID",
+			}); err != nil {
 				http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 			}
 			return
 		}
 
-		paper, err := newsRepository.GetNewsByID(id)
+		paper, err := h.NewsRepository.GetNewsByID(id)
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			if err := json.NewEncoder(w).Encode(map[string]string{
 				"status":  "error",
 				"message": err.Error(),

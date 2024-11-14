@@ -1,5 +1,6 @@
 env: "local"
 storage_path: "./storage/storage.db"
+storage_type: "sqlite"
 http_server:
   addr: "localhost:8080"
   timeout: 5s

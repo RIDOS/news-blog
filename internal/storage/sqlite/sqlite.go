@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/RIDOS/news-blog/internal/storage"
 	"github.com/RIDOS/news-blog/pkg/models"
 	"github.com/mattn/go-sqlite3"
 )
@@ -13,8 +12,7 @@ type Storage struct {
 	db *sql.DB
 }
 
-// New TODO: need migrations and interface for storage
-func New(storagePath string) (*Storage, error) {
+func NewSQLiteStorage(storagePath string) (*Storage, error) {
 	const op = "storage.sqlite.New"
 
 	db, err := sql.Open("sqlite3", storagePath)
@@ -33,7 +31,6 @@ func New(storagePath string) (*Storage, error) {
 	);
 	CREATE INDEX IF NOT EXISTS news_idx ON news(title);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -58,7 +55,7 @@ func (s *Storage) CreateNews(title, body, image string) (int64, error) {
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
-			return 0, fmt.Errorf("%s: %w", op, storage.ErrNewsExists)
+			return 0, fmt.Errorf("%s: %s", op, "news already exists")
 		}
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
@@ -81,12 +78,11 @@ func (s *Storage) GetNews(id int) (models.New, error) {
 
 	res, err := stmt.Query(id)
 	if err != nil {
-		return models.New{}, fmt.Errorf("%s: %w", op, storage.ErrNewsExists)
+		return models.New{}, fmt.Errorf("%s: %s", op, "news not found")
 	}
 
 	var news models.New
 	if res.Next() {
-		// Если есть результат, сканируем его
 		err = res.Scan(&news.Id, &news.Title, &news.Body, &news.Image, &news.CreatedAt, &news.UpdatedAt)
 		if err != nil {
 			return models.New{}, fmt.Errorf("%s: %w", op, err)

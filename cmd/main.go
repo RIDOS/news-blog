@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/RIDOS/news-blog/handler"
 	"github.com/RIDOS/news-blog/internal/config"
+	"github.com/RIDOS/news-blog/internal/handler"
 	"github.com/RIDOS/news-blog/internal/lib/logger/sl"
 	"github.com/RIDOS/news-blog/internal/repository"
+	"github.com/RIDOS/news-blog/internal/storage"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,19 +23,18 @@ func main() {
 
 	log.Info("Server start", slog.String("env", cfg.Env))
 
-	// TODO: add interface for db.
-	//storage, err := sqlite.New(cfg.StoragePath)
-	//if err != nil {
-	//	log.Error("failed to init storage", sl.Err(err))
-	//	os.Exit(1)
-	//}
-	//
-	//log.Info("Storage start", slog.String("env", cfg.Env))
-	//_ = storage
+	st, err := storage.NewStorage(cfg.StorageType, cfg.StoragePath)
+	if err != nil {
+		log.Error("failed to init storage", sl.Err(err))
+		os.Exit(1)
+	}
 
-	nr := repository.NewNewsRepository()
+	log.Info("Storage start", slog.String("storage_path", cfg.StoragePath))
 
-	handler.SetupRoutes(nr)
+	newsRepo := repository.NewNewsRepository(st)
+
+	newsHandler := handler.NewNewsHandler(newsRepo)
+	newsHandler.SetupRoutes()
 
 	log.Info("Listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
