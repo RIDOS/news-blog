@@ -3,8 +3,8 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"github.com/RIDOS/news-blog/internal/storage/sqlite"
 	"github.com/RIDOS/news-blog/pkg/models"
+	"github.com/RIDOS/news-blog/storage/sqlite"
 )
 
 var (
@@ -24,4 +24,6 @@ func NewStorage(dbType, connectionString string) (Storage, error) {
 type Storage interface {
 	CreateNews(title, body, image string) (int64, error)
 	GetNews(id int) (models.New, error)
+	GetAllNews(limit, offset int) ([]models.New, error)
+	Count() (int, error)
 }
