@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/RIDOS/news-blog/internal/repository"
+	pg "github.com/RIDOS/news-blog/internal/pagination"
+	"github.com/RIDOS/news-blog/pkg/repository"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,24 +12,30 @@ import (
 
 type NewsHandler struct {
 	NewsRepository *repository.NewsRepository
+	Logger         *slog.Logger
 }
 
-func NewNewsHandler(newsRepo *repository.NewsRepository) *NewsHandler {
-	return &NewsHandler{NewsRepository: newsRepo}
+func NewNewsHandler(log *slog.Logger, newsRepo *repository.NewsRepository) *NewsHandler {
+	return &NewsHandler{
+		NewsRepository: newsRepo,
+		Logger:         log,
+	}
 }
 
 func (h *NewsHandler) SetupRoutes() {
-	http.HandleFunc("/news", h.getNewsHandler())
-	http.HandleFunc("/news/", h.getNewsByIDHandler())
+	http.HandleFunc("/news", h.getAllNewsHandler())
+	http.HandleFunc("/news/", h.getNewsByIdHandler())
 }
 
-func (h *NewsHandler) getNewsHandler() http.HandlerFunc {
+func (h *NewsHandler) getAllNewsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		news, err := h.NewsRepository.GetAllNews()
+		pagination := pg.NewPagination(h.NewsRepository, 0, 100)
+		news, err := pagination.CurrentPage()
 
 		w.Header().Set("Content-Type", "application/json")
 
 		if err != nil {
+			h.Logger.Error("Failed to retrieve news", err.Error())
 			http.Error(w, "Failed to retrieve news", http.StatusInternalServerError)
 			return
 		}
@@ -38,7 +46,7 @@ func (h *NewsHandler) getNewsHandler() http.HandlerFunc {
 	}
 }
 
-func (h *NewsHandler) getNewsByIDHandler() http.HandlerFunc {
+func (h *NewsHandler) getNewsByIdHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idStr := strings.TrimPrefix(r.URL.Path, "/news/")
 		id, err := strconv.Atoi(idStr)
@@ -55,7 +63,7 @@ func (h *NewsHandler) getNewsByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		paper, err := h.NewsRepository.GetNewsByID(id)
+		paper, err := h.NewsRepository.GetByID(id)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			if err := json.NewEncoder(w).Encode(map[string]string{

@@ -92,3 +92,56 @@ func (s *Storage) GetNews(id int) (models.New, error) {
 
 	return news, nil
 }
+
+func (s *Storage) GetAllNews(limit, offset int) ([]models.New, error) {
+	const op = "storage.sqlite.GetAllNews"
+
+	stmt, err := s.db.Prepare("SELECT id, title, body, image, created_at, updated_at FROM news ORDER BY updated_at DESC LIMIT ? OFFSET ?")
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	rows, err := stmt.Query(limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", op, "news not found")
+	}
+
+	var allNews []models.New
+	for rows.Next() {
+		var news models.New
+		err := rows.Scan(&news.Id, &news.Title, &news.Body, &news.Image, &news.CreatedAt, &news.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("%s: scan error: %w", op, err)
+		}
+		allNews = append(allNews, news)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: iteration error: %w", op, err)
+	}
+
+	return allNews, nil
+}
+
+func (s *Storage) Count() (int, error) {
+	const op = "storage.sqlite.Count"
+
+	stmt, err := s.db.Prepare("SELECT COUNT(*) FROM news")
+
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	var count int
+	err = stmt.QueryRow().Scan(&count)
+
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if count == 0 {
+		return 0, errors.New("no news")
+	}
+
+	return count, nil
+}
