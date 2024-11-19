@@ -41,6 +41,7 @@ func (h *NewsHandler) getAllNewsHandler() http.HandlerFunc {
 		}
 
 		if err := json.NewEncoder(w).Encode(news); err != nil {
+			h.Logger.Error("Failed to encode JSON", err.Error())
 			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 		}
 	}
@@ -65,6 +66,7 @@ func (h *NewsHandler) getNewsByIdHandler() http.HandlerFunc {
 
 		paper, err := h.NewsRepository.GetByID(id)
 		if err != nil {
+			h.Logger.Error("Failed to retrieve news", err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			if err := json.NewEncoder(w).Encode(map[string]string{
 				"status":  "error",
@@ -76,6 +78,7 @@ func (h *NewsHandler) getNewsByIdHandler() http.HandlerFunc {
 		}
 
 		if err := json.NewEncoder(w).Encode(paper); err != nil {
+			h.Logger.Error("Failed to encode JSON", err.Error())
 			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 		}
 	}
