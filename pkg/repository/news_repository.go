@@ -34,7 +34,6 @@ func (r *NewsRepository) GetAll(limit, offset int) ([]interface{}, error) {
 		return nil, err
 	}
 
-	// Преобразуем []models.New в []interface{}
 	items := make([]interface{}, len(news))
 	for i, n := range news {
 		items[i] = n
@@ -51,7 +50,7 @@ func (r *NewsRepository) Count() (int, error) {
 	}
 
 	if count <= 0 {
-		return 0, errors.New("count is not 0")
+		return 0, errors.New("count is 0")
 	}
 
 	return count, nil
